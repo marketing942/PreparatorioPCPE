@@ -29,24 +29,25 @@
     produto: "Preparatório Online PCPE",
     whats:   "558173105354",
 
-    /* ⚠️ PENDENTE: o checkout da PCPE ainda não existe. Enquanto este campo
-       estiver vazio, todos os botões levam ao WhatsApp com mensagem pronta —
-       a página nunca fica com CTA morto. Quando o link chegar, colar só a URL
-       BASE (sem name, email, UTMs de teste): as UTMs de quem chega pelo
-       anúncio são repassadas pelo linkCheckout(), abaixo. */
-    checkout: "",
+    /* Só a URL BASE — sem name, email ou UTMs de teste. As UTMs de quem chega
+       pelo anúncio são repassadas pelo linkCheckout(), abaixo. O slug diz
+       "operacao-distintivo": é o endereço REAL da página de pagamento e não
+       acompanha o nome do produto — trocar aqui quebra o botão.
+       Vazio, os botões levam ao WhatsApp — a página nunca fica com CTA morto.
+       (A mesma URL está no fallback dos botões e no JSON-LD do index.html.) */
+    checkout: "https://checkout.cppem.com.br/pay/operacao-distintivo-pcpe",
 
-    /* Espelham a tela do checkout: "R$ 437,00 Total · Até 12 x R$ 44,68".
-       ⚠️ 12 × 44,68 = 536,16: o cartão TEM juros. A página não pode dizer
+    /* Espelham a tela do checkout: "R$ 637,00 Total", com R$ 732,36 no cartão.
+       ⚠️ 12 × 61,03 = 732,36: o cartão TEM juros. A página não pode dizer
        "sem juros" em lugar nenhum.
        `de` e `economia` vazios somem da tela (todo [data-se] sem valor fica
        hidden) — um preço cheio inventado seria número falso na cara do
        comprador. Se um dia houver "de/por" de verdade, é só preencher. */
     preco: {
       parcelas: "12x",
-      parcela:  "R$ 44,68",     // o número GRANDE da página
+      parcela:  "R$ 61,03",     // o número GRANDE da página
       nota:     "no cartão",    // o que acompanha a parcela
-      vista:    "R$ 437,00",    // o total do checkout
+      vista:    "R$ 637,00",    // o total do checkout
       de:       "",             // valor cheio, riscado acima da parcela
       economia: ""              // valor cheio − à vista
     }
