@@ -1,0 +1,1735 @@
+/* =========================================================
+   CPPEM · PREPARATÓRIO ONLINE PCPE — venda direta ao checkout
+   ---------------------------------------------------------
+   Sistema visual herdado de ../LivesPMPEePCPE e ../livepmpe:
+   Oxanium + Rajdhani, ouro #AF9256 sobre preto #0A0A0B, fios
+   de 1px em ouro translúcido, cantos chanfrados de operação,
+   grão de impressão e brasas subindo pela viewport.
+
+   O que é desta página:
+     · a ABERTURA — o leão do CPPEM e o brasão da PCPE batem
+       no meio da tela, e é da batida que nasce o nome da
+       preparatório. Toca uma vez por sessão.
+     · a seção do CONCURSO sobre a foto da tropa
+     · a GALERIA de aprovados
+     · o bloco de PREÇO com a moldura de luz correndo
+
+   Preço e checkout NÃO moram aqui nem no HTML: moram no
+   CONFIG do script.js. Ver o comentário lá.
+   ========================================================= */
+
+/* ─── RESET ────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── TOKENS ───────────────────────────────────────────── */
+:root {
+  --gold:        #AF9256;
+  --gold-light:  #C9AE7A;
+  --gold-pale:   #F0DCB0;
+  --gold-dark:   #8A7040;
+  --gold-deep:   #5E4B29;
+
+  --bg:   #080A0F;
+  --bg-2: #111115;
+  --bg-3: #18181E;
+  --bg-4: #1F1F28;
+
+  --border:        rgba(175,146,86,.18);
+  --border-soft:   rgba(175,146,86,.10);
+  --border-active: rgba(175,146,86,.55);
+
+  --text:      #E8E4D9;
+  --text-dim:  #ADA99B;
+  --text-mute: #87847A;
+
+  --danger: #C25B52;
+
+  /* A assinatura fria da PCPE. É de SUSSURRO: entra em halo, clarão e fio
+     — nunca em texto ou botão. O sistema continua sendo o ouro. */
+  --ember: #5B8CB8;   /* aço da Polícia Civil — o frio no lugar da brasa */
+  --halo:  rgba(91,140,184,.30);
+
+  --font-title: 'Oxanium', system-ui, sans-serif;
+  --font-ui:    'Rajdhani', system-ui, sans-serif;
+
+  --nav-h: 76px;
+  --ease:   cubic-bezier(.4,0,.2,1);
+  --freada: cubic-bezier(.16,1.02,.3,1);
+  --t:      .28s var(--ease);
+
+  --maxw: 1180px;
+
+  /* o hexágono de todos os medalhões e pips */
+  --hexr: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  --chanfro: 14px;
+}
+
+/* ─── BASE ─────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-h) + 16px);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-ui); font-size: 17px; font-weight: 500; line-height: 1.65;
+  overflow-x: hidden; position: relative;
+}
+/* grão fino: dá peso de impressão ao preto chapado. Acima do conteúdo e
+   abaixo de navbar/dock/float. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 210; pointer-events: none;
+  opacity: .13; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+img { max-width: 100%; height: auto; display: block; }
+/* !important porque várias peças declaram display próprio (.preco__de é
+   block) e venceriam o hidden — as linhas opcionais do preço apareceriam
+   vazias */
+[hidden] { display: none !important; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; }
+strong, b { font-weight: 700; color: var(--text); }
+::selection { background: var(--gold); color: #0B0A08; }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #0d0d0f; }
+::-webkit-scrollbar-thumb { background: #2a2618; border: 2px solid #0d0d0f; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-deep); }
+
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+/* ─── LAYOUT ───────────────────────────────────────────── */
+.container { width: min(100% - 44px, var(--maxw)); margin-inline: auto; }
+.center { text-align: center; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* overflow-x: clip é rede de segurança: nenhum halo ou pseudo decorativo pode
+   alargar a página. `clip` e não `hidden` — não cria contêiner de rolagem. */
+.section {
+  position: relative; padding: 106px 0; z-index: 2; overflow-x: clip;
+  background:
+    radial-gradient(900px 460px at 80% 6%,  rgba(91,140,184,.07), transparent 68%),
+    radial-gradient(780px 420px at 14% 94%, rgba(175,146,86,.045), transparent 70%);
+}
+.section--alt { background: linear-gradient(180deg, #0A0D13, #0E121B 50%, #0A0D13); }
+
+/* ─── MARCAS D ÁGUA ────────────────────────────────────────
+   A marca da PCPE entra pela ESQUERDA nas seções planas, cortada ao meio
+   pela borda — lê como relevo no papel, não como ilustração. O leão vai
+   para a direita nas alternadas, para os dois nunca se empilharem.
+   marca-*, e não brasao-*: o brasão oficial é colorido e jogava manchas
+   fora da paleta mesmo a 6% de opacidade. */
+.section::before, .section--alt::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+}
+.section::before {
+  background: url("public/marca-pcpe.webp") -330px 50% / auto 660px no-repeat;
+  opacity: .075;
+}
+.section--alt::before {
+  background: url("public/emblema-leao.webp") calc(100% + 250px) 50% / auto 620px no-repeat;
+  opacity: .035;
+}
+.section--alt::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--border-active), transparent) top    / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, var(--border-active), transparent) bottom / 100% 1px no-repeat;
+}
+.section > .container { position: relative; z-index: 2; }
+
+/* ─── TIPOGRAFIA DE SEÇÃO ──────────────────────────────── */
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 5px;
+  text-transform: uppercase; color: var(--gold);
+}
+.eyebrow::before, .eyebrow::after {
+  content: ''; width: 34px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.eyebrow::after { background: linear-gradient(90deg, var(--gold), transparent); }
+
+.section__head { text-align: center; max-width: 920px; margin: 0 auto 56px; }
+.section__title {
+  font-family: var(--font-title); font-size: clamp(30px, 4.6vw, 52px);
+  font-weight: 800; line-height: 1.04; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text); margin: 16px 0 0;
+  text-wrap: balance;
+}
+.section__title::after {
+  content: ''; display: block; width: 78px; height: 2px; margin: 22px auto 0;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.section__title--left { font-size: clamp(26px, 3.4vw, 40px); }
+.section__title--left::after { margin-inline: 0; }
+.section__lead {
+  max-width: 740px; margin: 22px auto 0; color: var(--text-dim);
+  font-size: 17px; line-height: 1.7;
+}
+.section__lead strong { color: var(--gold-light); }
+
+.gold {
+  background: linear-gradient(180deg, var(--gold-pale), var(--gold) 55%, var(--gold-dark));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ─── BRILHO (shine) ───────────────────────────────────────
+   Pseudo branco por cima da caixa. Só serve sobre fundo sólido: sobre letra
+   vazada leria como um quadrado claro passando por trás. */
+@keyframes shine-sweep {
+  0%   { transform: translateX(-160%) skewX(-22deg); }
+  55%  { transform: translateX(320%)  skewX(-22deg); }
+  100% { transform: translateX(320%)  skewX(-22deg); }
+}
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: ''; position: absolute; top: -60%; left: 0;
+  width: 42%; height: 220%; z-index: 3; pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(255,255,255,.10) 35%,
+    rgba(255,255,255,.55) 50%, rgba(255,255,255,.10) 65%, transparent 100%);
+  animation: shine-sweep 4.6s var(--ease) infinite;
+}
+.shine--slow::after { animation-duration: 6.5s; width: 34%; }
+
+/* ─── A LUZ NAS LETRAS ─────────────────────────────────────
+   Diferente do .shine: aqui a luz É o preenchimento do texto (duas camadas
+   recortadas por background-clip), então fora do desenho das letras não
+   existe pixel para pintar. */
+.luz {
+  background-image:
+    linear-gradient(100deg, transparent 0%, rgba(255,255,255,.92) 45%, rgba(255,255,255,.92) 55%, transparent 100%),
+    linear-gradient(180deg, var(--gold-pale), var(--gold) 52%, var(--gold-dark));
+  background-size: 55% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-position: -80% 0, 0 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+@keyframes brilho-letras {
+  0%   { background-position: -80% 0, 0 0; }
+  38%  { background-position: 180% 0, 0 0; }
+  100% { background-position: 180% 0, 0 0; }
+}
+
+/* ─── BOTÕES ───────────────────────────────────────────── */
+.btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  gap: 12px; height: 52px; padding: 0 30px;
+  font-size: 13.5px; font-weight: 700; letter-spacing: 2.4px;
+  text-transform: uppercase; white-space: nowrap; text-align: center;
+  border: 0; cursor: pointer; overflow: hidden; isolation: isolate;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+  transition: transform var(--t), filter var(--t), background var(--t), color var(--t);
+}
+.btn > span { position: relative; z-index: 2; }
+.btn svg { position: relative; z-index: 2; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t); }
+.btn:hover svg { transform: translateX(4px); }
+.btn:active { transform: translateY(1px) scale(.995); }
+
+.btn--gold {
+  color: #0B0A08;
+  background: linear-gradient(168deg, var(--gold-pale) 0%, var(--gold-light) 22%, var(--gold) 55%, var(--gold-dark) 100%);
+  filter: drop-shadow(0 10px 24px rgba(175,146,86,.30));
+}
+.btn--gold::before {
+  content: ''; position: absolute; inset: 1px; z-index: 1;
+  background: linear-gradient(180deg, rgba(255,255,255,.42), transparent 45%);
+  clip-path: inherit; pointer-events: none;
+}
+.btn--gold:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 16px 32px rgba(175,146,86,.52)) brightness(1.06);
+}
+.btn--ghost {
+  color: var(--gold-light); background: rgba(175,146,86,.05);
+  box-shadow: inset 0 0 0 1px var(--border-active);
+}
+.btn--ghost:hover {
+  color: #0B0A08; background: linear-gradient(168deg, var(--gold-light), var(--gold-dark));
+  transform: translateY(-2px);
+}
+.btn--lg { height: 62px; padding: 0 44px; font-size: 15px; letter-spacing: 3px; }
+.btn--block { width: 100%; }
+
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 4px rgba(175,146,86,.16); }
+  50%     { box-shadow: 0 0 0 8px rgba(175,146,86,.03); }
+}
+@keyframes aro-gira { to { transform: rotate(360deg); } }
+@keyframes halo-respira {
+  0%,100% { opacity: .62; transform: scale(1); }
+  50%     { opacity: 1;   transform: scale(1.09); }
+}
+@keyframes entra-sobe {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =========================================================
+   A ENTRADA — a colisão acontece NA PRÓPRIA HERO
+   ---------------------------------------------------------
+   Não existe tela de abertura por cima da página: a cena é a
+   hero. O fundo, o véu, a grade e o medalhão do primeiro
+   quadro são exatamente os que ficam no fim — nada troca de
+   lugar quando a cena acaba, e por isso pular no meio não
+   custa qualidade nenhuma.
+
+   No primeiro quadro a hero mostra só o fundo e o medalhão
+   VAZIO (aro de ouro, núcleo escuro). O brasão da PCPE entra
+   pela esquerda e o leão do CPPEM pela direita — os mesmos
+   lados que ocupam dentro do medalhão — e batem no centro
+   dele. Da batida saem clarão, ondas, risco, estilhaços e o
+   tranco; então os dois encolhem até a posição e o tamanho
+   exatos das duas metades do medalhão e apagam ao chegar
+   (passagem de bastão), a costura acende e o nome é
+   carimbado. Só depois entra o resto da dobra.
+
+   Toca UMA vez por sessão (o <head> decide, antes do primeiro
+   quadro). Quem pediu menos movimento nunca a vê, e quem
+   volta na mesma sessão recebe a versão curta — a colisão
+   dentro do medalhão (ver .sem-abertura).
+
+   --vem + --voo TEM que fechar em --impacto: se não fechar, o
+   clarão acende antes de os dois se encostarem.
+   ========================================================= */
+html.is-abertura .hero {
+  --vem:     .3s;
+  --voo:     .82s;
+  --impacto: 1.12s;   /* --vem + --voo */
+  /* o tranco é da TELA: a hero inteira leva o baque, fundo e tudo.
+     `backwards`, e não `both`: com `both` o transform:none do último quadro
+     ficaria fixado e o parallax do fundo não sairia mais do lugar. */
+  animation: tranco .42s var(--ease) var(--impacto) backwards;
+}
+/* ─── as três classes, e por que são três ──────────────────
+   · is-abertura  a coreografia desta versão. ENTRA no <head> e NÃO SAI mais:
+     ela é só a definição das animações. Tirá-la no fim devolvia cada peça
+     para o `rise` da cascata normal — e trocar a animação de um elemento no
+     meio do caminho faz o navegador tratá-la como uma animação NOVA, que
+     recomeça do zero. O título e o medalhão piscavam e re-entravam depois de
+     a cena já ter terminado.
+   · is-entrando  o que vale só ENQUANTO a cena roda: rolagem travada, dock e
+     WhatsApp fora, botão Pular e linha do tempo à mostra. É esta que sai.
+   · is-pulado    pulou no meio: tudo assume o estado final no mesmo quadro. */
+html.is-entrando, html.is-entrando body { overflow: hidden; }
+html.is-entrando .dock, html.is-entrando .float { display: none; }
+
+html.is-pulado .anim,
+html.is-pulado .fusao--hero,
+html.is-pulado .fusao--hero .fusao__lado,
+html.is-pulado .fusao--hero .fusao__costura,
+html.is-pulado .header,
+html.is-pulado .scroller,
+html.is-pulado .hero { animation: none !important; opacity: 1 !important; }
+/* a faísca é a única que tem pulso PERPÉTUO: congelar a animação dela
+   deixaria o medalhão com um brilho morto no meio */
+html.is-pulado .fusao--hero .fusao__faisca {
+  opacity: .9 !important; animation: faisca 3.2s var(--ease) infinite !important;
+}
+
+/* ─── a cascata, ancorada no impacto ───────────────────────
+   São os mesmos .anim da hero, com os atrasos recontados a partir da batida:
+   primeiro o nome carimbado, depois etiqueta, placa, texto, botões e
+   números. Nenhum elemento muda de posição — muda só quando aparece, e é
+   isso que faz a cena e a página serem a mesma coisa. */
+html.is-abertura .anim       { animation-delay: calc(var(--impacto) + .40s); }
+html.is-abertura .hero__cta  { animation-delay: calc(var(--impacto) + .42s); }
+html.is-abertura .hero__corp { animation-delay: calc(var(--impacto) + .56s); }
+/* o medalhão é o palco: está lá desde o primeiro quadro, e vazio */
+html.is-abertura .fusoes.anim { opacity: 1; animation: none; }
+html.is-abertura .scroller    { animation: entra-sobe .6s var(--ease) calc(var(--impacto) + .78s) both; }
+/* O HEADER fica de pé desde o primeiro quadro, e é de propósito: quem já
+   decidiu não deve esperar a cena acabar para achar o "Garantir vaga". Ele
+   também não teria como entrar na cascata sem duplicar a marcação de tempo —
+   --impacto mora na .hero, e num calc() fora dela a variável não existe (a
+   declaração inteira seria descartada em silêncio). */
+
+/* o nome é carimbado pela batida, no lugar do `rise` da cascata */
+html.is-abertura .hero__title.anim {
+  animation: carimbo .64s cubic-bezier(.2,.8,.25,1) calc(var(--impacto) + .06s) both;
+}
+html.is-abertura .hero__title .luz { animation-delay: calc(var(--impacto) + .8s); }
+
+/* ─── as metades do medalhão ───────────────────────────────
+   Acendem embaixo dos emblemas que voaram, no mesmo lugar e no mesmo
+   tamanho: o que se vê é um desenho só se assentando no medalhão. */
+html.is-abertura .fusao--hero .fusao__lado {
+  opacity: 0; animation: entra-metade .45s var(--ease) calc(var(--impacto) + .22s) forwards;
+}
+@keyframes entra-metade { from { opacity: 0; } to { opacity: 1; } }
+html.is-abertura .fusao--hero .fusao__costura {
+  opacity: 0; animation: costura-acende .55s var(--ease) calc(var(--impacto) + .12s) forwards;
+}
+html.is-abertura .fusao--hero .fusao__faisca {
+  opacity: 0;
+  animation:
+    faisca-acende .25s var(--ease) calc(var(--impacto) + .12s) forwards,
+    faisca 3.2s var(--ease) calc(var(--impacto) + .37s) infinite;
+}
+/* o medalhão recua no golpe, e a tela treme junto (tranco, acima) */
+html.is-abertura .fusao--hero { animation: recuo .42s var(--ease) var(--impacto) backwards; }
+
+/* ─── OS DOIS EMBLEMAS QUE VOAM ────────────────────────────
+   Moram DENTRO do .fusao: assim o ponto de encontro é o centro do medalhão
+   sem nenhuma medição em JS, e o alvo da passagem sai das medidas do próprio
+   medalhão (--med) em vez de números soltos.
+
+   A caixa de cada um é quadrada e o desenho é `contain`, então cada emblema
+   ocupa uma FATIA diferente dela: 357x419 no brasão, 400x465 no leão. O
+   --enc é metade da largura RENDERIZADA de cada um, mais um fio de folga
+   para o clarão caber no vão. */
+.choque {
+  display: none; position: absolute; inset: 0; z-index: 7; pointer-events: none;
+  --cx: calc(var(--med) * .72);
+}
+html.is-abertura .choque, .choque.is-fim { display: block; }
+/* pulou no meio do voo: os emblemas saem em fade, não com um corte seco */
+.choque.is-fim { opacity: 0; transition: opacity .3s var(--ease); }
+
+.choque__emblema {
+  position: absolute; left: 50%; top: 50%; display: block;
+  width: var(--cx); aspect-ratio: 1;
+  /* opacity 0 na base: sem isto os dois ficam empilhados no centro durante
+     o --vem, antes de o voo começar */
+  opacity: 0;
+  filter: drop-shadow(0 0 26px rgba(0,0,0,.85));
+}
+.choque__emblema img { width: 100%; height: 100%; object-fit: contain; }
+/* --enc: onde ele PARA na batida. --par: para onde ele vai depois, que é o
+   centro da metade dele dentro do medalhão — a imagem da metade tem 62% da
+   largura do medalhão ancorada a 13% da borda, então o centro dela cai em
+   44%, 6% antes do meio. A escala final (.861) é 62/72: a razão entre a
+   caixa da metade e a caixa do emblema que voa. */
+.choque__emblema--a { --enc: calc(var(--cx) * .435); --par: calc(var(--med) * -.06); }  /* brasão 357/419 */
+.choque__emblema--b { --enc: calc(var(--cx) * .44);  --par: calc(var(--med) *  .06); }  /* leão   400/465 */
+
+/* Duas animações por emblema: o VOO acelera (entra devagar, chega rápido —
+   lê como massa ganhando velocidade) e a PASSAGEM freia. O voo leva `both`
+   (senão o par fica empilhado no meio durante o --vem); a passagem só
+   `forwards` (com `backwards` ela valeria já no primeiro quadro e o voo
+   nunca aconteceria). */
+.choque__emblema--a {
+  animation:
+    voa-esq   var(--voo) cubic-bezier(.5,0,.85,.30) var(--vem) both,
+    passa-esq .62s       var(--freada)              var(--impacto) forwards;
+}
+.choque__emblema--b {
+  animation:
+    voa-dir   var(--voo) cubic-bezier(.5,0,.85,.30) var(--vem) both,
+    passa-dir .62s       var(--freada)              var(--impacto) forwards;
+}
+@keyframes voa-esq {
+  0%   { opacity: 0; transform: translate(calc(-50% - 62vw), -50%) rotate(-16deg) scale(.72); }
+  18%  { opacity: 1; }
+  100% { opacity: 1; transform: translate(calc(-50% - var(--enc)), -50%) rotate(0deg) scale(1); }
+}
+@keyframes voa-dir {
+  0%   { opacity: 0; transform: translate(calc(-50% + 62vw), -50%) rotate(16deg) scale(.72); }
+  18%  { opacity: 1; }
+  100% { opacity: 1; transform: translate(calc(-50% + var(--enc)), -50%) rotate(0deg) scale(1); }
+}
+/* ─── a passagem de bastão ─────────────────────────────────
+   O emblema não sai da batida para um lugar qualquer: vai para o ponto exato
+   onde a metade dele vai estar, no tamanho exato dela, e apaga ao chegar.
+   Some em 62% do percurso, e não no fim: nos últimos quadros a metade do
+   medalhão já está desenhada ali, e dois desenhos nítidos no mesmo ponto
+   leem como erro de renderização, não como um virando o outro. */
+@keyframes passa-esq {
+  0%   { opacity: 1;   transform: translate(calc(-50% - var(--enc)), -50%) scale(1); }
+  20%  { opacity: 1;   transform: translate(calc(-50% - var(--enc) - 20px), -50%) scale(1.05); }
+  62%  { opacity: .12; }
+  100% { opacity: 0;   transform: translate(calc(-50% + var(--par)), -50%) scale(.861); }
+}
+@keyframes passa-dir {
+  0%   { opacity: 1;   transform: translate(calc(-50% + var(--enc)), -50%) scale(1); }
+  20%  { opacity: 1;   transform: translate(calc(-50% + var(--enc) + 20px), -50%) scale(1.05); }
+  62%  { opacity: .12; }
+  100% { opacity: 0;   transform: translate(calc(-50% + var(--par)), -50%) scale(.861); }
+}
+
+/* O clarão, as ondas e o risco saem do centro do medalhão e vazam por cima
+   de tudo — só a hero os apara (ela é `overflow: hidden`). É o que dá escala
+   ao impacto: sem eles a batida acontece dentro de 300px no meio da tela. */
+.choque__clarao {
+  position: absolute; left: 50%; top: 50%; display: block;
+  width: 130vmax; height: 130vmax; opacity: 0; transform: translate(-50%, -50%);
+  background: radial-gradient(circle,
+    #FFF6DE 0%, rgba(255,231,176,.85) 6%, rgba(91,140,184,.45) 15%, transparent 42%);
+  animation: clarao-tela .62s var(--ease) var(--impacto) forwards;
+}
+@keyframes clarao-tela {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.12); }
+  12%  { opacity: 1; transform: translate(-50%, -50%) scale(.42); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+/* Anéis hexagonais, não círculos: o hexágono é a forma dos medalhões. Dois,
+   com atrasos diferentes — um anel só lê como bolha, dois leem como onda.
+   A opacidade cai bem antes do fim da escala: ampliado, o hexágono vira duas
+   barras verticais altas, e elas não podem ficar cruzando o nome. */
+.choque__onda {
+  position: absolute; left: 50%; top: 50%; display: block;
+  width: 240px; height: 240px; opacity: 0;
+  box-shadow: inset 0 0 0 3px var(--gold-pale);
+  clip-path: var(--hexr);
+  animation: onda-hex .52s cubic-bezier(.12,.7,.3,1) var(--impacto) forwards;
+}
+.choque__onda--2 { animation-delay: calc(var(--impacto) + .1s); animation-duration: .64s; }
+@keyframes onda-hex {
+  0%   { opacity: .95; transform: translate(-50%, -50%) scale(.14); }
+  55%  { opacity: .3; }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(7); }
+}
+/* 200vw, e não 100%: o risco mora dentro do medalhão, e 100% seria a largura
+   dele — a lâmina tem que rasgar a tela inteira */
+.choque__risco {
+  position: absolute; left: 50%; top: 50%; display: block;
+  width: 200vw; height: 3px; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--gold-pale) 30%, #FFF6DE 50%, var(--gold-pale) 70%, transparent);
+  box-shadow: 0 0 26px 5px rgba(240,220,176,.6);
+  animation: risco .56s var(--ease) var(--impacto) forwards;
+}
+@keyframes risco {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scaleX(.02) scaleY(2.4); }
+  14%  { opacity: 1; transform: translate(-50%, -50%) scaleX(.55) scaleY(1.6); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1.4) scaleY(.25); }
+}
+/* o tranco: a TELA leva o baque, fundo e tudo */
+@keyframes tranco {
+  0%   { transform: none; }
+  12%  { transform: translate3d(-9px, 5px, 0); }
+  26%  { transform: translate3d(8px, -6px, 0); }
+  42%  { transform: translate3d(-6px, -3px, 0); }
+  58%  { transform: translate3d(5px, 4px, 0); }
+  74%  { transform: translate3d(-3px, -2px, 0); }
+  100% { transform: none; }
+}
+
+/* ─── o carimbo do nome ────────────────────────────────────
+   Vale para o <h1> inteiro (designação + PCPE), que é a peça que a batida
+   estampa. Ele NÃO muda de posição: é o mesmo título da hero, no mesmo
+   lugar, só entrando de outro jeito. */
+@keyframes carimbo {
+  0%   { opacity: 0; transform: scale(1.5); filter: blur(10px) drop-shadow(0 8px 30px rgba(0,0,0,.8)); letter-spacing: 16px; }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: none;       filter: blur(0)    drop-shadow(0 8px 30px rgba(0,0,0,.8)); letter-spacing: 1px; }
+}
+
+.hero__pular {
+  position: absolute; right: 18px; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 8;
+  display: none; align-items: center; gap: 8px; height: 38px; padding: 0 16px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--text-mute); cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  transition: color var(--t), box-shadow var(--t);
+  animation: entra-sobe .5s var(--ease) .5s both;
+}
+html.is-entrando .hero__pular { display: inline-flex; }
+.hero__pular:hover { color: var(--gold-light); box-shadow: inset 0 0 0 1px var(--border-active); }
+.hero__pular svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+/* a linha do tempo da entrada: diz sem palavras que isto acaba sozinho */
+html.is-entrando .hero__tempo { display: block; }
+.hero__tempo {
+  position: absolute; left: 0; bottom: 0; z-index: 8; display: none;
+  width: 100%; height: 2px; transform-origin: left; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold), var(--gold-pale));
+  box-shadow: 0 0 12px rgba(175,146,86,.7);
+  animation: tempo calc(var(--impacto) + 1.55s) linear forwards;
+}
+@keyframes tempo { to { transform: scaleX(1); } }
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+.progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0; z-index: 320;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold), var(--gold-pale));
+  box-shadow: 0 0 12px rgba(175,146,86,.7);
+}
+.header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h); z-index: 300;
+  display: flex; align-items: center;
+  background: linear-gradient(180deg, rgba(8,10,15,.72), rgba(8,10,15,.30));
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  transition: height var(--t), background var(--t), box-shadow var(--t);
+}
+.header::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-active) 20%, var(--border-active) 80%, transparent);
+  opacity: .55; transition: opacity var(--t);
+}
+.header.is-stuck { height: 66px; background: rgba(9,9,10,.94); box-shadow: 0 14px 40px -18px rgba(0,0,0,.95); }
+.header.is-stuck::after { opacity: 1; }
+.header__inner {
+  display: flex; align-items: center; gap: 22px;
+  width: min(100% - 36px, 1320px); margin-inline: auto;
+}
+.brand { display: flex; align-items: center; gap: 13px; flex-shrink: 0; }
+.brand__leao { position: relative; display: block; width: 42px; transition: width var(--t); }
+.brand__leao img { width: 100%; filter: drop-shadow(0 2px 8px rgba(175,146,86,.28)); transition: filter var(--t); }
+.brand:hover .brand__leao img { filter: drop-shadow(0 2px 14px rgba(175,146,86,.65)); }
+.header.is-stuck .brand__leao { width: 36px; }
+.brand__nome {
+  display: flex; flex-direction: column; line-height: 1;
+  font-family: var(--font-title); font-size: 19px; font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--text);
+}
+.brand__nome i {
+  margin-top: 4px; font-family: var(--font-ui); font-style: normal;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 2.6px; color: var(--gold);
+}
+.nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.nav a {
+  position: relative; padding: 10px 12px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text-dim); transition: color var(--t);
+}
+.nav a::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: 4px; height: 1px;
+  background: var(--gold); transform: scaleX(0); transform-origin: left; transition: transform var(--t);
+}
+.nav a:hover { color: var(--gold-light); }
+.nav a:hover::after { transform: scaleX(1); }
+.header .btn { height: 42px; padding: 0 20px; font-size: 11.5px; letter-spacing: 2px; margin-left: 8px; }
+
+/* =========================================================
+   HERO
+   ========================================================= */
+.hero {
+  /* marcação da colisão CURTA, a de dentro do medalhão — só vale quando a
+     entrada cheia não tocou (ver .sem-abertura mais abaixo). Na entrada
+     cheia estes três são redefinidos em html.is-abertura .hero */
+  --vem:     .5s;
+  --bate:    .5s;
+  --impacto: 1s;     /* --vem + --bate */
+
+  position: relative; z-index: 2;
+  min-height: 100svh; display: flex; align-items: center;
+  padding: calc(var(--nav-h) + 40px) 0 72px;
+  overflow: hidden; text-align: center;
+}
+.hero__bg { position: absolute; inset: -6% 0 0; will-change: transform; }
+/* Sem foto: não há imagem da Polícia Civil no acervo, e um atirador de
+   camuflado ou uma tropa fardada diriam "militar". O fundo é luz de aço
+   vindo do alto e, à direita, os anéis de uma digital — investigação, que é
+   a cara da carreira civil. */
+.hero__bg i {
+  position: absolute; inset: 0; display: block;
+  background:
+    radial-gradient(55% 50% at 16% 12%, rgba(91,140,184,.55), transparent 70%),
+    radial-gradient(45% 45% at 88% 62%, rgba(91,140,184,.32), transparent 70%),
+    radial-gradient(40% 35% at 50% 100%, rgba(175,146,86,.18), transparent 70%),
+    linear-gradient(180deg, #0D1726, #080A0F 80%);
+}
+.hero__bg i::after {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-radial-gradient(ellipse 34% 44% at 84% 56%,
+    transparent 0 7px, rgba(141,180,214,.22) 7px 8.5px);
+  mask-image: radial-gradient(38% 46% at 84% 56%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(38% 46% at 84% 56%, #000 30%, transparent 75%);
+}
+.hero__veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 42%, rgba(8,10,15,.36) 0%, rgba(8,10,15,.86) 58%, rgba(8,10,15,.97) 100%),
+    linear-gradient(180deg, rgba(8,10,15,.92) 0%, transparent 24%, transparent 62%, var(--bg) 100%);
+}
+.hero__dawn {
+  position: absolute; left: 50%; bottom: -32%; transform: translateX(-50%);
+  width: 130%; height: 60%; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 100%, var(--halo), rgba(175,146,86,.06) 42%, transparent 70%);
+}
+.hero__grid {
+  position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    linear-gradient(rgba(175,146,86,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(175,146,86,.055) 1px, transparent 1px);
+  background-size: 74px 74px;
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 8%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 8%, transparent 70%);
+}
+.hero__scan {
+  position: absolute; inset: 0; pointer-events: none; opacity: .2;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
+}
+.hero__inner { position: relative; z-index: 4; }
+
+/* ─── A DOBRA É A CENA ─────────────────────────────────────
+   A ordem é a do filme: o medalhão primeiro, o nome carimbado embaixo dele,
+   os dois botões e a assinatura da corporação fechando. Nada de etiqueta,
+   parágrafo ou painel de números aqui — tudo isso já é dito nas seções
+   seguintes, e na dobra só rouba a cena da peça. */
+
+/* "PCPE" é uma palavra de quatro letras: pode (e deve) ser bem maior que um
+   nome composto — é ela que segura a dobra */
+.hero__title {
+  margin-top: clamp(18px, 3vh, 34px);
+  font-family: var(--font-title); font-size: clamp(76px, 13vw, 156px);
+  font-weight: 800; line-height: .94; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text);
+}
+.hero__desig {
+  display: block; margin-bottom: 10px;
+  font-size: clamp(12px, 1.7vw, 16px); font-weight: 700;
+  letter-spacing: clamp(6px, 1.4vw, 12px); text-indent: clamp(6px, 1.4vw, 12px);
+  color: var(--gold); text-shadow: 0 0 24px rgba(175,146,86,.5);
+}
+.hero__title .luz {
+  filter: drop-shadow(0 8px 36px rgba(0,0,0,.7));
+  animation: brilho-letras 5s var(--ease) 1.4s infinite;
+}
+.hero__cta { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: clamp(24px, 4vh, 36px); }
+/* A assinatura da corporação fecha a dobra, embaixo dos botões. Texto puro, e
+   não a placa que era: uma caixa com moldura logo abaixo de dois botões
+   grandes vira uma terceira peça disputando o clique. */
+.hero__corp { margin-top: 26px; }
+.hero__corp b {
+  display: block; font-family: var(--font-title);
+  font-size: clamp(13px, 1.5vw, 15px); font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--gold-light);
+}
+.hero__corp span {
+  display: block; margin-top: 5px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 2.4px;
+  text-transform: uppercase; color: var(--text-mute);
+}
+
+/* =========================================================
+   O MEDALHÃO PARTIDO — PCPE | CPPEM
+   ---------------------------------------------------------
+   Um hexágono cortado por uma costura diagonal de ouro: de um lado o brasão
+   da PCPE, do outro o leão do CPPEM. É a mesma dupla que bateu na entrada,
+   agora montada numa peça só — e é dentro desta caixa que a batida acontece
+   (ver "A ENTRADA", acima).
+
+   O .fusao__core tem clip-path hexagonal, e clip-path recorta também os
+   descendentes — então cada lado usa o seu próprio recorte diagonal sem
+   máscara composta. Os dois lados ocupam a LARGURA INTEIRA do núcleo: é o que
+   faz cada desenho mostrar a sua metade, e não a imagem inteira espremida.
+   ========================================================= */
+/* sem margem no topo: na dobra o medalhão é a PRIMEIRA peça, não uma
+   ilustração depois do texto */
+.fusoes { display: flex; justify-content: center; }
+.fusao-wrap { display: flex; flex-direction: column; align-items: center; }
+.fusao {
+  /* --med é a régua da peça: a largura do medalhão. Os emblemas que voam na
+     entrada saem dela (tamanho, ponto de encontro e alvo da passagem), então
+     mudar o medalhão de tamanho reajusta a cena inteira junto. */
+  --med: clamp(200px, 26vw, 300px);
+  position: relative; width: var(--med); aspect-ratio: 1;
+  /* hexágono de bico curto: a faixa de largura cheia vai de 18% a 82% da
+     altura, e é ela que decide o tamanho máximo do desenho */
+  --hex: polygon(50% 0%, 93.3% 18%, 93.3% 82%, 50% 100%, 6.7% 82%, 6.7% 18%);
+  container-type: inline-size;
+}
+/* Na hero o medalhão ABRE a página: entra com a mesma presença que tem na
+   cena, e é ele que manda na dobra. No CTA final ele é só um selo. */
+.fusao--hero { --med: clamp(230px, 26vw, 340px); }
+
+.fusao::before {
+  content: ''; position: absolute; inset: -18%; z-index: 0; border-radius: 50%;
+  background: radial-gradient(circle, var(--halo), transparent 68%);
+  animation: halo-respira 5.4s var(--ease) infinite;
+}
+.fusao__aro { position: absolute; inset: 0; z-index: 1; clip-path: var(--hex); overflow: hidden; }
+.fusao__aro::before {
+  content: ''; position: absolute; inset: -40%;
+  background: conic-gradient(from 0deg,
+    var(--gold-deep), var(--gold-light) 18%, var(--gold-pale) 26%, var(--gold) 42%,
+    var(--gold-deep) 58%, var(--gold-light) 76%, var(--gold-deep) 100%);
+  animation: aro-gira 16s linear infinite;
+}
+.fusao__core {
+  position: absolute; inset: 3px; z-index: 2; overflow: hidden; clip-path: var(--hex);
+  background:
+    radial-gradient(120% 90% at 50% 6%, rgba(175,146,86,.20), transparent 58%),
+    linear-gradient(180deg, #1B1B23, #0A0A0D);
+}
+.fusao__lado { position: absolute; inset: 0; transition: transform var(--t); }
+/* diagonal de 54% no topo a 46% na base: inclinação de sabre */
+.fusao__lado--a { clip-path: polygon(0 0, 54% 0, 46% 100%, 0 100%); }
+.fusao__lado--b { clip-path: polygon(54% 0, 100% 0, 100% 100%, 46% 100%); }
+/* ancorado por left/right, não por transform: em transform a porcentagem é
+   do PRÓPRIO elemento, e brasão e leão têm proporções diferentes */
+.fusao__lado img {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 62%; height: 62%; object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.7));
+}
+.fusao__lado--a img { left: 13%; }
+.fusao__lado--b img { right: 13%; }
+.fusao__sigla {
+  display: none; position: absolute; top: 50%; transform: translateY(-50%);
+  font-family: var(--font-title); font-weight: 800; font-size: 9cqw;
+  line-height: 1; text-align: center;
+  background: linear-gradient(180deg, var(--gold-pale), var(--gold) 55%, var(--gold-dark));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.fusao__lado--a .fusao__sigla { left: 7%;  right: 49%; }
+.fusao__lado--b .fusao__sigla { left: 49%; right: 7%;  }
+.fusao__lado.is-fallback img { display: none; }
+.fusao__lado.is-fallback .fusao__sigla { display: block; }
+
+.fusao__costura {
+  position: absolute; left: 50%; top: -6%; z-index: 3; width: 2px; height: 112%;
+  transform: translateX(-50%) rotate(4.6deg);
+  background: linear-gradient(180deg, transparent, var(--gold-pale) 18%, #fff 50%, var(--gold-pale) 82%, transparent);
+  box-shadow: 0 0 16px 2px rgba(240,220,176,.6); pointer-events: none;
+}
+.fusao__faisca {
+  position: absolute; left: 50%; top: 50%; z-index: 4; width: 5cqw; height: 5cqw;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: linear-gradient(140deg, #FFFDF6, var(--gold-light));
+  box-shadow: 0 0 14px 2px rgba(240,220,176,.75);
+  animation: faisca 3.2s var(--ease) infinite; pointer-events: none;
+}
+@keyframes faisca {
+  0%,100% { transform: translate(-50%,-50%) rotate(45deg) scale(1);   opacity: .9; }
+  50%     { transform: translate(-50%,-50%) rotate(45deg) scale(1.3); opacity: 1; }
+}
+.fusao:hover .fusao__lado--a { transform: translateX(-4px); }
+.fusao:hover .fusao__lado--b { transform: translateX(4px); }
+
+/* varredura de luz que passa pelo medalhão, presa ao hexágono */
+.fusao__core::after {
+  content: ''; position: absolute; top: -60%; left: 0; width: 40%; height: 220%; z-index: 3;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12) 45%, rgba(255,255,255,.4) 50%, rgba(255,255,255,.12) 55%, transparent);
+  animation: shine-sweep 6s var(--ease) 2s infinite;
+}
+
+.fusao__clarao, .fusao__onda, .fusao__estilhacos { position: absolute; pointer-events: none; opacity: 0; }
+
+/* ─── A COLISÃO CURTA — só sem a entrada cheia ─────────────
+   Quem acabou de ver os dois emblemas atravessarem a hero não pode ver o
+   mesmo choque de novo em miniatura: para essa pessoa as metades já foram
+   entregues pela passagem de bastão (ver "A ENTRADA").
+
+   Quem NÃO viu (segunda visita na sessão, link com ?abertura=0) recebe a
+   colisão aqui, dentro do aro — assim a logo em movimento nunca falta. */
+.sem-abertura .fusao--hero .fusao__lado--a { animation: bate-esq var(--bate) cubic-bezier(.2,.7,.25,1) var(--vem) backwards; }
+.sem-abertura .fusao--hero .fusao__lado--b { animation: bate-dir var(--bate) cubic-bezier(.2,.7,.25,1) var(--vem) backwards; }
+@keyframes bate-esq {
+  0%   { transform: translateX(-155%); filter: blur(3px); opacity: .25; }
+  70%  { opacity: 1; }
+  100% { transform: translateX(0);     filter: blur(0);   opacity: 1; }
+}
+@keyframes bate-dir {
+  0%   { transform: translateX(155%);  filter: blur(3px); opacity: .25; }
+  70%  { opacity: 1; }
+  100% { transform: translateX(0);     filter: blur(0);   opacity: 1; }
+}
+.sem-abertura .fusao--hero .fusao__costura {
+  opacity: 0; animation: costura-acende .55s var(--ease) var(--impacto) forwards;
+}
+@keyframes costura-acende {
+  0%   { opacity: 0; transform: translateX(-50%) rotate(4.6deg) scaleY(.2); filter: brightness(3); }
+  35%  { opacity: 1; transform: translateX(-50%) rotate(4.6deg) scaleY(1.1); }
+  100% { opacity: 1; transform: translateX(-50%) rotate(4.6deg) scaleY(1);   filter: brightness(1); }
+}
+.sem-abertura .fusao--hero .fusao__faisca {
+  opacity: 0;
+  animation:
+    faisca-acende .25s var(--ease) var(--impacto) forwards,
+    faisca 3.2s var(--ease) calc(var(--impacto) + .25s) infinite;
+}
+@keyframes faisca-acende {
+  0%   { opacity: 0;  transform: translate(-50%,-50%) rotate(45deg) scale(3.4); }
+  100% { opacity: .9; transform: translate(-50%,-50%) rotate(45deg) scale(1); }
+}
+.sem-abertura .fusao--hero { animation: recuo .42s var(--ease) var(--impacto) backwards; }
+@keyframes recuo {
+  0%   { transform: scale(1); }
+  18%  { transform: scale(1.055); }
+  42%  { transform: scale(.984) translateX(2px); }
+  68%  { transform: scale(1.012) translateX(-1px); }
+  100% { transform: scale(1) translateX(0); }
+}
+.fusao__clarao {
+  left: 50%; top: 50%; z-index: 5; width: 62%; height: 62%; border-radius: 50%;
+  transform: translate(-50%,-50%) scale(0);
+  background: radial-gradient(circle, #FFFDF6 0%, var(--gold-pale) 26%, rgba(91,140,184,.5) 52%, transparent 72%);
+  mix-blend-mode: screen;
+}
+.sem-abertura .fusao__clarao { animation: clarao-med .5s ease-out var(--impacto) backwards; }
+@keyframes clarao-med {
+  0%   { opacity: 0;   transform: translate(-50%,-50%) scale(.15); }
+  12%  { opacity: .95; }
+  100% { opacity: 0;   transform: translate(-50%,-50%) scale(2.4); }
+}
+.fusao__onda {
+  left: 50%; top: 50%; z-index: 5; width: 100%; height: 100%; border-radius: 50%;
+  border: 2px solid var(--gold-pale); transform: translate(-50%,-50%) scale(.2);
+}
+.sem-abertura .fusao__onda { animation: onda-med .85s cubic-bezier(.15,.75,.3,1) var(--impacto) backwards; }
+@keyframes onda-med {
+  0%   { opacity: 0;   transform: translate(-50%,-50%) scale(.2);  border-width: 6px; }
+  10%  { opacity: .85; }
+  100% { opacity: 0;   transform: translate(-50%,-50%) scale(1.85); border-width: 1px; }
+}
+/* container-type faz desta camada a régua do `cqw` dos cacos: em transform a
+   porcentagem seria da largura do próprio caco (4px) */
+.fusao__estilhacos { inset: 0; z-index: 6; opacity: 1; container-type: inline-size; }
+.estilhaco {
+  position: absolute; left: var(--ox, 50%); top: 50%;
+  width: var(--s, 4px); height: var(--s, 4px); border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #FFFDF6, var(--cor, var(--gold-light)) 55%, transparent 76%);
+  box-shadow: 0 0 10px 2px var(--cor, var(--gold-light));
+  opacity: 0;
+  animation: estilhaco var(--dur, .9s) cubic-bezier(.1,.7,.3,1) var(--atraso, 0s) backwards;
+}
+@keyframes estilhaco {
+  0%   { opacity: 0; transform: translate(-50%,-50%) rotate(var(--ang)) translateX(0); }
+  12%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--ang)) translateX(var(--dist)) scale(.3); }
+}
+
+.scroller { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 4; }
+.scroller i {
+  position: relative; display: block; width: 22px; height: 34px;
+  box-shadow: inset 0 0 0 1px var(--border-active); border-radius: 12px;
+}
+.scroller i::after {
+  content: ''; position: absolute; left: 50%; top: 7px; transform: translateX(-50%);
+  width: 3px; height: 6px; border-radius: 2px; background: var(--gold);
+  animation: scrolldot 1.9s var(--ease) infinite;
+}
+@keyframes scrolldot { 0%{opacity:0;top:7px} 40%{opacity:1} 80%{opacity:0;top:20px} 100%{opacity:0} }
+
+/* =========================================================
+   FAIXA CORRIDA
+   ========================================================= */
+.strip {
+  position: relative; z-index: 2; overflow: hidden;
+  padding: 15px 0; background: #0C0C0F; border-block: 1px solid var(--border);
+}
+.strip__track { display: flex; width: max-content; gap: 46px; animation: marquee 34s linear infinite; }
+.strip__track span {
+  display: inline-flex; align-items: center; gap: 46px; white-space: nowrap;
+  font-family: var(--font-title); font-size: 12.5px; font-weight: 700;
+  letter-spacing: 3.4px; text-transform: uppercase; color: var(--text-mute);
+}
+.strip__track span::after { content: ''; width: 5px; height: 5px; background: var(--gold); transform: rotate(45deg); }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+/* =========================================================
+   O CONCURSO — sobre o "dossiê"
+   ---------------------------------------------------------
+   No lugar da foto da tropa, uma mesa de investigação: grade
+   de papel milimetrado em aço, luz fria e o brasão da PCPE
+   gigante à direita, cortado pela borda. O .tropa__tom puxa
+   tudo para o azul-aço em `mix-blend-mode: color`.
+   ========================================================= */
+.tropa { position: relative; z-index: 2; padding: 118px 0 110px; overflow: hidden; }
+.tropa__foto {
+  position: absolute; inset: -14% 0; will-change: transform;
+  background:
+    repeating-linear-gradient(0deg,  rgba(141,180,214,.06) 0 1px, transparent 1px 36px),
+    repeating-linear-gradient(90deg, rgba(141,180,214,.06) 0 1px, transparent 1px 36px),
+    radial-gradient(70% 60% at 28% 42%, #16283F, #080A0F 78%);
+}
+.tropa__foto::before {
+  content: ''; position: absolute; inset: 0;
+  background: url("public/marca-pcpe.webp") calc(100% + 160px) 50% / auto 74% no-repeat;
+  opacity: .2;
+}
+.tropa__tom { position: absolute; inset: 0; background: #2B4A68; mix-blend-mode: color; opacity: .45; }
+.tropa__veil {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg, var(--bg) 0%, rgba(8,10,15,.5) 20%, rgba(8,10,15,.62) 55%, rgba(8,10,15,.9) 85%, var(--bg) 100%),
+    radial-gradient(80% 60% at 50% 40%, transparent, rgba(8,10,15,.6));
+}
+.tropa > .container { position: relative; z-index: 2; }
+.tropa .section__lead { color: #C8C3B4; }
+
+.concurso { display: grid; grid-template-columns: .82fr 1.18fr; gap: 20px; align-items: stretch; }
+.vaga {
+  position: relative; overflow: hidden; padding: 32px 26px 28px; text-align: center;
+  background: linear-gradient(180deg, rgba(24,24,30,.82), rgba(12,12,15,.9));
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px var(--border-active);
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+}
+.vaga::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(320px circle at 50% 0%, rgba(91,140,184,.18), transparent 68%);
+}
+.vaga > * { position: relative; z-index: 1; }
+.vaga__crest {
+  position: relative; width: 104px; height: 104px; margin: 0 auto 18px;
+  --hex: polygon(50% 0%, 93.3% 18%, 93.3% 82%, 50% 100%, 6.7% 82%, 6.7% 18%);
+}
+.vaga__crest::before {
+  content: ''; position: absolute; inset: 0; clip-path: var(--hex);
+  background: linear-gradient(155deg, var(--gold-pale), var(--gold) 30%, var(--gold-deep) 70%, var(--gold-dark));
+}
+.vaga__crest::after {
+  content: ''; position: absolute; inset: 2px; clip-path: var(--hex);
+  background: linear-gradient(180deg, #1B1B23, #0C0C10);
+}
+.vaga__crest img {
+  position: absolute; inset: 0; z-index: 2; margin: auto;
+  width: 70%; height: 70%; object-fit: contain;
+}
+.vaga h3 {
+  font-family: var(--font-title); font-size: 18px; font-weight: 800;
+  letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+}
+.vaga__sigla {
+  display: block; margin-top: 4px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--gold);
+}
+.vaga__num {
+  display: block; margin: 18px 0 4px;
+  font-family: var(--font-title); font-size: clamp(52px, 6vw, 68px); font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, var(--gold-pale), var(--gold) 52%, var(--gold-dark));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 24px rgba(91,140,184,.3));
+}
+.vaga__num-label {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-mute);
+}
+.vaga__detalhe {
+  margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border-soft);
+  font-size: 14px; line-height: 1.6; color: var(--text-dim);
+}
+.vaga__detalhe b { display: block; margin-bottom: 4px; color: var(--gold-light); font-weight: 700; letter-spacing: .4px; }
+.vaga__nota {
+  display: block; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft);
+  font-size: 11px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-mute);
+}
+
+.etapas { display: grid; gap: 12px; align-content: start; }
+.etapas__titulo {
+  font-size: 11px; font-weight: 700; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 2px;
+}
+.etapa {
+  display: flex; align-items: flex-start; gap: 18px; padding: 20px 24px;
+  background: linear-gradient(180deg, rgba(24,24,30,.8), rgba(14,14,18,.86));
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  transition: transform var(--t), box-shadow var(--t);
+}
+.etapa:hover { transform: translateX(4px); box-shadow: inset 0 0 0 1px var(--border-active); }
+.etapa__n {
+  flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center;
+  font-family: var(--font-title); font-size: 15px; font-weight: 800; color: var(--gold);
+  background: linear-gradient(160deg, rgba(175,146,86,.20), rgba(175,146,86,.03));
+  box-shadow: inset 0 0 0 1px var(--border-active);
+  clip-path: var(--hexr);
+}
+.etapa h3 {
+  font-family: var(--font-title); font-size: 16px; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--text); margin-bottom: 5px;
+}
+.etapa p { font-size: 14.5px; line-height: 1.6; color: var(--text-dim); }
+
+/* =========================================================
+   O QUE VOCÊ RECEBE
+   ---------------------------------------------------------
+   Seis itens em lista, não em cards: são um pacote único, lido
+   de cima para baixo. Seis fecha exato em três colunas (duas
+   fileiras) e em duas colunas (três fileiras) — nada sobra sozinho.
+   ========================================================= */
+.entrega { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.item {
+  position: relative; display: flex; align-items: flex-start; gap: 13px;
+  padding: 17px 18px; isolation: isolate;
+  background: linear-gradient(180deg, rgba(24,24,30,.9), rgba(17,17,21,.9));
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  transition: transform var(--t), box-shadow var(--t), background var(--t);
+}
+/* o clarão que segue o cursor, no ::before para herdar o chanfro */
+.item::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0;
+  background: radial-gradient(300px 200px at var(--mx, 50%) var(--my, 50%), rgba(175,146,86,.14), transparent 70%);
+  clip-path: inherit; transition: opacity var(--t);
+}
+.item:hover::before { opacity: 1; }
+.item:hover {
+  transform: translateX(4px); box-shadow: inset 0 0 0 1px var(--border-active);
+  background: linear-gradient(180deg, rgba(30,30,38,.95), rgba(19,19,24,.95));
+}
+/* visto em SVG, não o emoji ✅: o emoji quebra a paleta e muda de desenho
+   entre Android, iOS e Windows */
+.item__check {
+  flex-shrink: 0; width: 23px; height: 23px; margin-top: 1px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: rgba(175,146,86,.12); box-shadow: inset 0 0 0 1px var(--border-active);
+  color: var(--gold-light);
+}
+.item__check svg { width: 11.5px; height: 11.5px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.item__txt { display: block; }
+.item__txt b {
+  display: block; font-family: var(--font-title); font-size: 15.5px; font-weight: 700;
+  letter-spacing: .4px; color: var(--text); line-height: 1.25;
+}
+.item__txt > span { display: block; margin-top: 5px; color: var(--text-dim); font-size: 14px; line-height: 1.52; }
+
+/* =========================================================
+   O PROFESSOR
+   ========================================================= */
+.duo { display: grid; grid-template-columns: .85fr 1.15fr; gap: 54px; align-items: center; }
+.duo__foto { position: relative; }
+.duo__foto img {
+  width: 100%; aspect-ratio: 4 / 5; object-fit: cover;
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+}
+.duo__foto::before {
+  content: ''; position: absolute; inset: -6%; z-index: -1;
+  background: radial-gradient(circle at 50% 40%, var(--halo), transparent 68%);
+}
+/* cantoneiras de ouro nos dois cantos retos: moldura de mira, não de quadro */
+.duo__foto::after {
+  content: ''; position: absolute; inset: -10px; pointer-events: none;
+  background:
+    linear-gradient(var(--gold), var(--gold)) top left / 34px 2px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) top left / 2px 34px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) bottom right / 34px 2px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) bottom right / 2px 34px no-repeat;
+  opacity: .8;
+}
+.duo__placa {
+  position: absolute; left: 18px; right: 18px; bottom: 18px;
+  display: block; padding: 14px 18px; text-align: center;
+  background: rgba(9,9,11,.88);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px var(--border-active);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.duo__placa b {
+  display: block; font-family: var(--font-title); font-size: 17px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--gold-light);
+}
+.duo__placa span { display: block; margin-top: 3px; font-size: 11.5px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-mute); }
+.duo__texto p { margin-top: 18px; color: var(--text-dim); font-size: 16.5px; line-height: 1.7; }
+.duo__texto p strong { color: var(--gold-light); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 32px; }
+.stat {
+  padding: 18px 12px; text-align: center;
+  background: linear-gradient(180deg, rgba(24,24,30,.78), rgba(12,12,15,.86));
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+  transition: box-shadow var(--t), transform var(--t);
+}
+.stat:hover { transform: translateY(-4px); box-shadow: inset 0 0 0 1px var(--border-active); }
+.stat b {
+  display: block; font-family: var(--font-title); font-size: clamp(26px, 3vw, 34px); font-weight: 800; line-height: 1;
+  background: linear-gradient(180deg, var(--gold-pale), var(--gold) 52%, var(--gold-dark));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stat span {
+  display: block; margin-top: 8px; font-size: 10px; font-weight: 700;
+  letter-spacing: 2.2px; text-transform: uppercase; color: var(--text-mute); line-height: 1.5;
+}
+
+/* =========================================================
+   APROVADOS — a galeria
+   ---------------------------------------------------------
+   Duas fileiras correndo em sentidos opostos, sangrando pelas
+   bordas da tela (a máscara apaga as pontas). Cada fileira é
+   o conjunto duplicado: a animação anda -50% e o segundo
+   conjunto cai exatamente onde o primeiro começou, então o
+   loop nunca mostra emenda. Pousar o cursor para a fileira.
+   ========================================================= */
+.galeria {
+  position: relative; z-index: 2; display: grid; gap: 16px;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.fila { overflow: hidden; }
+.fila__track { display: flex; width: max-content; gap: 16px; animation: marquee 64s linear infinite; }
+.fila--volta .fila__track { animation-direction: reverse; animation-duration: 72s; }
+.fila:hover .fila__track { animation-play-state: paused; }
+.aluno {
+  position: relative; flex-shrink: 0; width: clamp(180px, 19vw, 250px); aspect-ratio: 4 / 5;
+  overflow: hidden; background: var(--bg-3);
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+.aluno img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(.82) contrast(1.04) brightness(.92);
+  transition: transform .7s var(--freada), filter .5s var(--ease);
+}
+.aluno::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--border);
+  background: linear-gradient(180deg, transparent 62%, rgba(8,10,15,.7));
+  transition: box-shadow var(--t);
+}
+.aluno:hover img { transform: scale(1.07); filter: saturate(1.05) contrast(1.04) brightness(1); }
+.aluno:hover::after { box-shadow: inset 0 0 0 1px var(--gold); }
+.aprovados__rodape { position: relative; z-index: 2; margin-top: 48px; }
+
+/* =========================================================
+   COMPARATIVO — o único bloco arredondado, de propósito
+   ---------------------------------------------------------
+   O chanfro serve a peças de tensão (botão, medalhão, preço).
+   Uma tabela de comparação é lida devagar, linha por linha:
+   canto macio e linha larga é o que a deixa ser LIDA.
+   ========================================================= */
+.vs-wrap {
+  max-width: 1000px; margin-inline: auto; border-radius: 20px; overflow: hidden;
+  background: linear-gradient(180deg, #16161C, #101014);
+  box-shadow: inset 0 0 0 1px var(--border), 0 30px 60px -40px rgba(0,0,0,.9);
+}
+.vs { width: 100%; border-collapse: collapse; }
+.vs__cab {
+  padding: 20px 24px; text-align: left; vertical-align: bottom;
+  font-family: var(--font-title); font-size: 12.5px; font-weight: 800;
+  letter-spacing: 2.6px; text-transform: uppercase; color: var(--text-mute);
+}
+.vs__cab--sim { color: var(--gold); }
+.vs thead th:first-child { width: 24%; }
+.vs tbody th {
+  padding: 18px 24px; text-align: left; vertical-align: middle;
+  font-family: var(--font-title); font-size: 15px; font-weight: 700;
+  letter-spacing: .3px; color: var(--text); line-height: 1.3;
+}
+.vs td { padding: 18px 24px; vertical-align: middle; font-size: 15px; line-height: 1.45; }
+.vs tbody tr:nth-child(even) { background: rgba(255,255,255,.018); }
+.vs tbody tr + tr th, .vs tbody tr + tr td { border-top: 1px solid var(--border-soft); }
+.vs__sim { color: var(--text); background: rgba(175,146,86,.06); width: 33%; }
+.vs__nao { color: var(--text-mute); width: 33%; }
+.vs__marca {
+  float: left; width: 24px; height: 24px; margin: 1px 11px 0 0;
+  display: grid; place-items: center; border-radius: 50%;
+}
+.vs__marca svg { width: 12px; height: 12px; fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.vs__sim .vs__marca { background: rgba(175,146,86,.16); box-shadow: inset 0 0 0 1px var(--border-active); }
+.vs__sim .vs__marca svg { stroke: var(--gold-light); }
+.vs__nao .vs__marca { background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+.vs__nao .vs__marca svg { stroke: var(--text-mute); }
+
+/* =========================================================
+   O INVESTIMENTO
+   ---------------------------------------------------------
+   À esquerda, o resumo do que entra; à direita, a caixa do
+   preço dentro de uma moldura com a luz correndo (mesmo
+   princípio do aro dos medalhões: recorte parado, rampa cônica
+   girando num filho maior — border-image não aceita clip-path).
+
+   O número grande é a PARCELA. O valor cheio vem riscado em
+   cima, em corpo pequeno, e o à vista embaixo: na ordem
+   inversa, o primeiro número lido é o maior da página e a
+   pessoa decide antes de descobrir que dá para dividir.
+
+   ⚠️ Todos os valores saem do CONFIG do script.js.
+   ========================================================= */
+.investimento {
+  background:
+    radial-gradient(760px 420px at 70% 30%, rgba(91,140,184,.12), transparent 66%),
+    linear-gradient(180deg, #0B0B0E, #101014 52%, #0B0B0E);
+}
+.investimento::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--border-active), transparent) top    / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, var(--border-active), transparent) bottom / 100% 1px no-repeat;
+}
+.investimento__brasas { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.investimento__brasas .brasa { animation-name: brasa-sobe-curta; }
+@keyframes brasa-sobe-curta {
+  0%   { opacity: 0;              transform: translate3d(0, 0, 0)         scale(1); }
+  8%   { opacity: var(--op); }
+  25%  {                          transform: translate3d(12px, -190px, 0) scale(.94); }
+  50%  {                          transform: translate3d(-9px, -380px, 0) scale(.84); }
+  75%  { opacity: calc(var(--op) * .5);
+                                  transform: translate3d(11px, -560px, 0) scale(.68); }
+  100% { opacity: 0;              transform: translate3d(-4px, -740px, 0) scale(.5); }
+}
+
+.oferta { display: grid; grid-template-columns: 1fr minmax(0, 560px); gap: clamp(26px, 4vw, 56px); align-items: center; }
+
+.oferta__cab {
+  display: block; margin-bottom: 18px;
+  font-family: var(--font-title); font-size: clamp(20px, 2.4vw, 26px); font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text);
+}
+.oferta__lista { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.oferta__lista li {
+  position: relative; padding-left: 28px;
+  font-size: 15px; line-height: 1.45; color: var(--text-dim);
+}
+.oferta__lista li::before {
+  content: ''; position: absolute; left: 0; top: 2px; width: 18px; height: 20px;
+  background: rgba(175,146,86,.16); box-shadow: inset 0 0 0 1px var(--border-active);
+  clip-path: var(--hexr);
+}
+.oferta__lista li::after {
+  content: ''; position: absolute; left: 6px; top: 7px; width: 5px; height: 8px;
+  border: solid var(--gold-light); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.oferta__lista b { color: var(--text); font-weight: 700; }
+
+/* ─── a garantia ───────────────────────────────────────────
+   É o direito de arrependimento do art. 49 do CDC (compra fora do
+   estabelecimento: 7 dias). A página diz isso por extenso, e não "garantia
+   incondicional": prometer além da lei é prometer o que a empresa pode não
+   querer cumprir. */
+.garantia {
+  display: flex; align-items: center; gap: 18px; margin-top: 30px; padding: 18px 20px;
+  background: rgba(175,146,86,.06);
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.garantia__selo {
+  position: relative; flex-shrink: 0; width: 66px; height: 74px; display: grid; place-items: center;
+  clip-path: var(--hexr);
+  background: linear-gradient(155deg, var(--gold-pale), var(--gold) 36%, var(--gold-dark));
+}
+.garantia__selo::before {
+  content: ''; position: absolute; inset: 2px; clip-path: var(--hexr);
+  background: linear-gradient(180deg, #1B1B23, #0C0C10);
+}
+.garantia__selo b {
+  position: relative; font-family: var(--font-title); font-size: 26px; font-weight: 800; line-height: 1;
+  background: linear-gradient(180deg, var(--gold-pale), var(--gold) 55%, var(--gold-dark));
+  -webkit-background-clip: text; background-clip: text; color: transparent; text-align: center;
+}
+.garantia__selo b small { display: block; margin-top: 2px; font-size: 8px; letter-spacing: 1.6px; }
+.garantia__txt b {
+  display: block; font-family: var(--font-title); font-size: 15px; font-weight: 800;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold-light);
+}
+.garantia__txt span { display: block; margin-top: 3px; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
+
+.preco__moldura {
+  position: relative; isolation: isolate; overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 28px 100%, 0 calc(100% - 28px));
+  filter: drop-shadow(0 30px 60px rgba(0,0,0,.6));
+}
+.preco__moldura::before {
+  content: ''; position: absolute; inset: -60%; z-index: 0;
+  background: conic-gradient(from 0deg,
+    rgba(175,146,86,.26) 0 48%, var(--gold) 64%, var(--gold-pale) 74%,
+    var(--gold) 84%, rgba(175,146,86,.26) 96% 100%);
+  animation: aro-gira 7s linear infinite;
+}
+.preco__moldura::after {
+  content: ''; position: absolute; inset: 2px; z-index: 1;
+  background:
+    radial-gradient(420px 240px at 50% 0%, rgba(91,140,184,.14), transparent 70%),
+    linear-gradient(165deg, #17171D, #0D0D11 60%, #131218);
+  clip-path: polygon(0 0, calc(100% - 27px) 0, 100% 27px, 100% 100%, 27px 100%, 0 calc(100% - 27px));
+}
+.preco__caixa { position: relative; z-index: 2; padding: clamp(28px, 4vw, 42px) clamp(20px, 3.4vw, 40px); }
+
+.preco__topo { display: flex; align-items: center; justify-content: center; gap: 12px; padding-bottom: 20px; }
+.preco__selo {
+  position: relative; flex-shrink: 0; width: 38px; height: 42px; display: grid; place-items: center;
+  clip-path: var(--hexr); background: linear-gradient(155deg, var(--gold-pale), var(--gold-dark));
+}
+.preco__selo::before { content: ''; position: absolute; inset: 1.5px; clip-path: var(--hexr); background: #111115; }
+.preco__selo img { position: relative; width: 64%; height: 64%; object-fit: contain; }
+.preco__cab {
+  font-size: 11px; font-weight: 700; letter-spacing: 3.6px;
+  text-transform: uppercase; color: var(--gold);
+}
+.preco__destaque { text-align: center; }
+.preco__de { display: block; font-size: 14.5px; letter-spacing: 1px; color: var(--text-mute); }
+.preco__de s { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); }
+.preco__parcela {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  margin: 6px 0 8px; line-height: .95;
+}
+.preco__parcela i {
+  font-family: var(--font-title); font-style: normal;
+  font-size: clamp(20px, 3.4vw, 30px); font-weight: 700; letter-spacing: 1px; color: var(--text-dim);
+}
+.preco__parcela b {
+  font-family: var(--font-title); font-size: clamp(48px, 8.4vw, 84px); font-weight: 800; letter-spacing: -2px;
+  filter: drop-shadow(0 6px 22px rgba(91,140,184,.35));
+  animation: brilho-letras 5.4s var(--ease) 1s infinite;
+}
+.preco__vista { display: block; font-size: 15px; color: var(--text-dim); letter-spacing: .4px; }
+.preco__vista b { color: var(--gold-light); }
+
+/* A economia NÃO repete o ouro em degradê da parcela nem o fundo cheio do
+   botão: duas superfícies douradas empilhadas viram uma disputa em que o
+   botão perde. Aqui é ouro chapado sobre caixa escura. */
+.economia {
+  margin-top: 20px; padding: 14px 16px 16px; text-align: center;
+  background:
+    radial-gradient(120% 160% at 50% 0%, rgba(175,146,86,.16), transparent 70%),
+    rgba(175,146,86,.06);
+  box-shadow: inset 0 0 0 1px var(--border-active);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.economia__cab {
+  display: block; margin-bottom: 2px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 3.6px; text-transform: uppercase; color: var(--gold);
+}
+.economia__val {
+  display: block; font-family: var(--font-title); font-size: clamp(28px, 5vw, 40px); font-weight: 800;
+  letter-spacing: -1px; line-height: 1.05; color: var(--gold-light);
+  text-shadow: 0 4px 26px var(--halo);
+}
+
+.economia__nota {
+  display: block; margin-top: 6px; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-dim);
+}
+.economia__nota b { color: var(--gold-light); }
+
+.preco__cta { margin-top: 24px; }
+.preco__cta .btn { height: 66px; font-size: 15.5px; }
+.selos {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 18px;
+}
+.selos span {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-mute);
+}
+.selos svg { width: 15px; height: 15px; fill: none; stroke: var(--gold); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.preco__nota {
+  display: block; margin-top: 14px; text-align: center;
+  font-size: 12px; letter-spacing: 1.2px; color: var(--text-mute); line-height: 1.6;
+}
+
+/* =========================================================
+   FAQ
+   ========================================================= */
+.faq { max-width: 880px; margin-inline: auto; display: grid; gap: 12px; }
+.faq__item {
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  transition: box-shadow var(--t);
+}
+.faq__item[open] { box-shadow: inset 0 0 0 1px var(--border-active); }
+.faq__item summary {
+  position: relative; list-style: none; cursor: pointer; padding: 22px 62px 22px 26px;
+  font-family: var(--font-title); font-size: 17px; font-weight: 700;
+  letter-spacing: 1px; color: var(--text); transition: color var(--t);
+}
+.faq__item summary::-webkit-details-marker { display: none; }
+.faq__item summary:hover { color: var(--gold-light); }
+.faq__item summary::after {
+  content: '+'; position: absolute; right: 26px; top: 50%; transform: translateY(-50%);
+  font-size: 24px; font-weight: 400; color: var(--gold); transition: transform var(--t);
+}
+.faq__item[open] summary::after { transform: translateY(-50%) rotate(45deg); }
+.faq__item p { padding: 0 26px 24px; color: var(--text-dim); font-size: 16px; line-height: 1.7; }
+.faq__item strong { color: var(--gold-light); }
+
+/* =========================================================
+   CTA FINAL
+   ========================================================= */
+.final { position: relative; z-index: 2; padding: 116px 0; overflow: hidden; text-align: center; }
+.final::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(900px 520px at 50% 100%, var(--halo), transparent 68%),
+    linear-gradient(180deg, var(--bg), #0D0D10);
+}
+.final::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; z-index: 1;
+  background: linear-gradient(90deg, transparent, var(--border-active), transparent);
+}
+.final__marca {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .07;
+  background: url("public/marca-pcpe.webp") -330px 50% / auto 620px no-repeat;
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+}
+.final__inner { position: relative; z-index: 3; }
+.final .fusoes { margin: 0 0 34px; }
+.final .fusao { --med: clamp(170px, 20vw, 220px); }
+.final h2 {
+  font-family: var(--font-title); font-size: clamp(30px, 4.8vw, 54px); font-weight: 800; line-height: 1.04;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text);
+}
+.final p { margin: 22px auto 34px; max-width: 60ch; color: var(--text-dim); font-size: 17px; }
+.final__note {
+  display: block; margin-top: 18px; font-size: 12.5px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--text-mute);
+}
+
+/* =========================================================
+   RODAPÉ
+   ========================================================= */
+.footer { position: relative; z-index: 2; background: #08080A; border-top: 1px solid var(--border); padding: 62px 0 0; }
+.footer__inner { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 34px; padding-bottom: 44px; }
+.footer__leao { display: block; width: 74px; }
+.footer__brand p { margin: 18px 0 20px; color: var(--text-dim); font-size: 15px; font-style: italic; max-width: 40ch; line-height: 1.6; }
+.footer__social { display: flex; flex-wrap: wrap; gap: 10px; }
+.footer__social a {
+  width: 38px; height: 38px; display: grid; place-items: center;
+  color: var(--text-dim); box-shadow: inset 0 0 0 1px var(--border);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  transition: color var(--t), box-shadow var(--t), background var(--t);
+}
+.footer__social a:hover { color: var(--gold); box-shadow: inset 0 0 0 1px var(--border-active); background: rgba(175,146,86,.08); }
+.footer__social svg { width: 17px; height: 17px; fill: currentColor; }
+.footer__col h4 {
+  font-family: var(--font-title); font-size: 13px; font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+}
+.footer__col a { display: block; padding: 6px 0; color: var(--text-dim); font-size: 15px; transition: color var(--t); }
+.footer__col a:hover { color: var(--gold-light); }
+.footer__bar {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 22px 0 34px; border-top: 1px solid var(--border-soft);
+  font-size: 13.5px; letter-spacing: .6px; color: var(--text-mute);
+}
+.footer__bar strong { color: var(--text-dim); font-weight: 700; }
+.footer__cnpj { letter-spacing: 1.4px; }
+
+/* =========================================================
+   BARRA FIXA (mobile) e WHATSAPP
+   Os dois só entram depois da hero, juntos: antes disso o próprio CTA da
+   dobra já está na tela, e o WhatsApp pousaria em cima do botão secundário.
+   ========================================================= */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 280;
+  display: none; align-items: center; gap: 14px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(9,9,10,.95);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-active);
+  transform: translateY(110%); visibility: hidden;
+  transition: transform .35s var(--ease), visibility .35s;
+}
+.dock.is-on { transform: none; visibility: visible; }
+.dock__info { flex: 1; min-width: 0; }
+.dock__info b, .dock__info span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock__info b { font-family: var(--font-title); font-size: 13.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--gold-light); }
+.dock__info span { font-size: 11.5px; letter-spacing: 1.4px; color: var(--text-mute); }
+
+.float {
+  position: fixed; right: 18px; bottom: 22px; z-index: 290;
+  width: 54px; height: 54px; display: grid; place-items: center;
+  border-radius: 50%; background: #1FA855; color: #fff;
+  box-shadow: 0 12px 30px -8px rgba(31,168,85,.6);
+  opacity: 0; visibility: hidden; transform: scale(.7);
+  transition: transform .3s var(--freada), opacity .3s var(--ease), visibility .3s, box-shadow var(--t);
+}
+.float.is-on { opacity: 1; visibility: visible; transform: none; }
+.float.is-on:hover { transform: scale(1.07); box-shadow: 0 16px 36px -8px rgba(31,168,85,.8); }
+.float svg { width: 27px; height: 27px; fill: currentColor; }
+
+/* =========================================================
+   ANIMAÇÕES DE ENTRADA
+   ========================================================= */
+/* `translate`, e não `transform`: é uma propriedade independente, então a
+   entrada não apaga o transform do hover dos cards. O script tira a classe
+   quando a entrada termina, e a transição própria de cada peça volta a valer. */
+.reveal { opacity: 0; translate: 0 26px; transition: opacity .7s var(--ease), translate .7s var(--ease); }
+.reveal.is-visible { opacity: 1; translate: none; }
+/* variante que entra de lado — as duas colunas de um bloco vêm uma de cada
+   lado e se encontram, ecoando a batida da abertura. Presa ao .reveal: sem
+   JS, a classe de lado sozinha não pode deslocar nada. */
+.reveal.reveal--esq { translate: -34px 0; }
+.reveal.reveal--dir { translate: 34px 0; }
+.reveal.reveal--esq.is-visible, .reveal.reveal--dir.is-visible { translate: none; }
+
+/* `from` explícito: com `backwards` num keyframe que só declara o `to`, o
+   elemento ficaria congelado no estado JÁ visível durante o atraso */
+.anim { opacity: 0; animation: rise .8s var(--ease) both; }
+.d1 { animation-delay: .05s } .d2 { animation-delay: .18s } .d3 { animation-delay: .32s }
+.d4 { animation-delay: .5s }  .d5 { animation-delay: .64s } .d6 { animation-delay: .78s }
+@keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+/* =========================================================
+   BRASAS — atmosfera da página inteira
+   position: fixed, então elas sobem ATRAVÉS do conteúdo. z 205: acima das
+   seções (2) e abaixo do grão (210), da dock (280) e da navbar (300).
+   ========================================================= */
+.brasas { position: fixed; inset: 0; z-index: 205; pointer-events: none; overflow: hidden; }
+.brasas::after {
+  content: ''; position: absolute; left: 50%; bottom: -12%; transform: translateX(-50%);
+  width: 150%; height: 34%;
+  background: radial-gradient(ellipse at 50% 100%, var(--halo), rgba(175,146,86,.045) 42%, transparent 72%);
+  opacity: .45;
+}
+.brasa {
+  position: absolute; bottom: -24px; left: var(--x);
+  width: var(--s); height: var(--s); border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #FFEFC9, var(--cor) 52%, transparent 74%);
+  box-shadow: 0 0 calc(var(--s) * 3) calc(var(--s) * .35) var(--cor);
+  opacity: 0;
+  animation: brasa-sobe var(--dur) linear infinite;
+  animation-delay: var(--atraso);
+  will-change: transform, opacity;
+}
+@keyframes brasa-sobe {
+  0%   { opacity: 0;              transform: translate3d(0, 0, 0)          scale(1); }
+  6%   { opacity: var(--op); }
+  25%  {                          transform: translate3d(16px, -26vh, 0)   scale(.94); }
+  50%  {                          transform: translate3d(-12px, -52vh, 0)  scale(.84); }
+  75%  { opacity: calc(var(--op) * .55);
+                                  transform: translate3d(14px, -78vh, 0)   scale(.68); }
+  100% { opacity: 0;              transform: translate3d(-6px, -104vh, 0)  scale(.5); }
+}
+.sparks { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.spark {
+  position: absolute; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--gold-light); box-shadow: 0 0 10px 2px rgba(201,174,122,.6);
+  opacity: 0; animation: float linear infinite;
+}
+@keyframes float {
+  0%   { opacity: 0; transform: translateY(0) scale(1); }
+  12%  { opacity: .85; }
+  85%  { opacity: .5; }
+  100% { opacity: 0; transform: translateY(-260px) scale(.5); }
+}
+
+/* =========================================================
+   RESPONSIVO
+   ---------------------------------------------------------
+   A maior parte deste tráfego é celular. Em cada quebra alguma
+   peça muda de FORMA, não só de largura.
+   ========================================================= */
+@media (max-width: 1080px) {
+  .nav { display: none; }
+  .header .btn { margin-left: auto; }
+  .footer__inner { grid-template-columns: 1fr 1fr; }
+  .entrega { grid-template-columns: repeat(2, 1fr); }
+  .vs tbody th, .vs td, .vs__cab { padding-inline: 16px; }
+  .oferta { grid-template-columns: 1fr; max-width: 640px; margin-inline: auto; }
+  /* no celular a caixa do preço vem PRIMEIRO: quem toca em "Investimento"
+     quer ver o número, não uma lista que já leu três blocos acima */
+  .preco__moldura { order: -1; }
+}
+
+@media (max-width: 920px) {
+  .entrega { grid-template-columns: 1fr; }
+  .concurso { grid-template-columns: 1fr; max-width: 620px; margin-inline: auto; }
+  .duo { grid-template-columns: 1fr; gap: 40px; }
+  .duo__foto { max-width: 400px; margin-inline: auto; }
+  .duo__texto { text-align: center; }
+  .duo__texto .eyebrow { justify-content: center; }
+  .section__title--left::after { margin-inline: auto; }
+}
+
+@media (max-width: 720px) {
+  body { font-size: 16px; }
+  .section, .tropa { padding: 74px 0; }
+  .container { width: calc(100% - 32px); }
+
+  .header__inner { width: calc(100% - 24px); gap: 12px; }
+  .brand__nome { font-size: 16px; letter-spacing: 2px; }
+  .brand__nome i { font-size: 8.5px; letter-spacing: 2px; }
+  .header .btn { height: 38px; padding: 0 14px; font-size: 10.5px; letter-spacing: 1.6px; }
+
+  /* min-height fica em 100svh também no celular: com a dobra enxuta o
+     conteúdo cabe, e sem isso a faixa corrida da seção seguinte aparecia no
+     rodapé da tela — inclusive no meio da cena de entrada */
+  .hero { min-height: 100svh; padding-top: calc(var(--nav-h) + 20px); padding-bottom: 48px; }
+  .hero__bg i { opacity: .85; }
+  .hero__cta { flex-direction: column; }
+  .hero__cta .btn { width: 100%; }
+  .scroller { display: none; }
+  .fusao--hero { --med: clamp(200px, 58vw, 268px); }
+  .hero__corp { margin-top: 22px; }
+  .hero__corp b { letter-spacing: 2.4px; }
+  .hero__corp span { font-size: 10.5px; letter-spacing: 2px; }
+
+  .btn--lg { height: 58px; padding: 0 26px; font-size: 13.5px; letter-spacing: 2px; }
+
+  .etapa { padding: 18px; gap: 14px; }
+  .section::before, .final__marca { background-size: auto 420px; }
+
+  .stats { gap: 8px; }
+  .stat { padding: 14px 6px; }
+  .stat span { font-size: 9px; letter-spacing: 1.4px; }
+
+  .aluno { width: clamp(150px, 42vw, 190px); }
+  .galeria { gap: 10px; }
+  .fila__track { gap: 10px; }
+
+  .oferta__lista { grid-template-columns: 1fr; }
+  .preco__caixa { padding: 26px 18px; }
+  .economia { padding: 13px 12px 15px; }
+  .economia__cab { letter-spacing: 2.6px; }
+  /* "Garantir minha vaga por 12x R$ 44,68" não cabe numa linha em 360px: em
+     vez de cortar a seta, o rótulo quebra em duas dentro da mesma altura */
+  .preco__cta .btn, .final .btn {
+    height: auto; min-height: 60px; padding: 12px 18px;
+    white-space: normal; line-height: 1.3; font-size: 13px; letter-spacing: 1.4px;
+  }
+  /* sem balance, o valor da parcela ficava sozinho na segunda linha */
+  .preco__cta .btn > span, .final .btn > span { text-wrap: balance; }
+  .garantia { align-items: flex-start; gap: 14px; padding: 16px; }
+  .garantia__selo { width: 54px; height: 60px; }
+  .garantia__selo b { font-size: 21px; }
+
+  .footer__inner { grid-template-columns: 1fr; gap: 26px; }
+  .footer__bar { flex-direction: column; text-align: center; padding-bottom: 96px; }
+
+  .dock { display: flex; }
+  .float { bottom: calc(84px + env(safe-area-inset-bottom)); width: 48px; height: 48px; }
+  .float svg { width: 24px; height: 24px; }
+
+  .final { padding: 84px 0; }
+  .final .btn { width: 100%; }
+
+  /* ─── A TABELA VIRA PILHA DE CARTÕES ─────────────────────
+     Três colunas em 360px só cabem com rolagem lateral, e rolagem lateral
+     numa comparação é onde ela morre: nunca se vê os dois lados juntos.
+     Os rótulos saem do data-col de cada célula. */
+  .vs-wrap { background: none; box-shadow: none; border-radius: 0; overflow: visible; }
+  .vs, .vs tbody, .vs tr, .vs tbody th, .vs td { display: block; width: auto; }
+  .vs thead { display: none; }
+  .vs tbody tr {
+    margin-bottom: 12px; border-radius: 16px; overflow: hidden;
+    background: linear-gradient(180deg, #16161C, #101014);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .vs tbody tr:nth-child(even) { background: linear-gradient(180deg, #16161C, #101014); }
+  .vs tbody tr + tr th, .vs tbody tr + tr td { border-top: 0; }
+  .vs tbody th {
+    padding: 13px 18px; background: rgba(175,146,86,.07);
+    font-size: 12px; letter-spacing: 2.4px; text-transform: uppercase; color: var(--gold);
+  }
+  .vs td { padding: 13px 18px; overflow: hidden; }
+  .vs td + td { border-top: 1px solid var(--border-soft); }
+  .vs__sim { background: rgba(175,146,86,.05); }
+  .vs td::before {
+    content: attr(data-col); display: block; margin: 0 0 5px 35px;
+    font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-mute);
+  }
+  .vs__sim::before { color: var(--gold); }
+  .vs__marca { margin-top: 0; }
+}
+
+@media (max-width: 420px) {
+  .brand__nome i { display: none; }
+  /* eyebrow longa quebrava torta entre os dois fios decorativos */
+  .eyebrow { letter-spacing: 3.4px; gap: 9px; text-align: center; }
+  .eyebrow::before, .eyebrow::after { width: 18px; flex-shrink: 0; }
+}
+
+/* =========================================================
+   MOVIMENTO REDUZIDO
+   Quem pede menos movimento vê a página inteira — some o movimento
+   perpétuo e a cena de entrada. O <head> já não liga a abertura.
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: .01ms !important;
+  }
+  .reveal, .anim { opacity: 1 !important; transform: none !important; }
+  .brasas, .sparks, .choque, .investimento__brasas { display: none !important; }
+  .fila { overflow-x: auto; }
+}
