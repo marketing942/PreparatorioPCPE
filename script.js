@@ -31,24 +31,22 @@
     whats:   "558173105354",
 
     /* Só a URL BASE — sem name, email ou UTMs de teste. As UTMs de quem chega
-       pelo anúncio são repassadas pelo linkCheckout(), abaixo. O slug diz
-       "operacao-distintivo": é o endereço REAL da página de pagamento e não
-       acompanha o nome do produto — trocar aqui quebra o botão.
+       pelo anúncio são repassadas pelo linkCheckout(), abaixo.
        Vazio, os botões levam ao WhatsApp — a página nunca fica com CTA morto.
        (A mesma URL está no fallback dos botões e no JSON-LD do index.html.) */
-    checkout: "https://checkout.cppem.com.br/pay/operacao-distintivo-pcpe",
+    checkout: "https://checkout.cppem.com.br/pay/preparatorio-online-para-a-policia-civil-de-pernambuco-pcpe-02",
 
-    /* Espelham a tela do checkout: "R$ 637,00 Total", com R$ 732,36 no cartão.
-       ⚠️ 12 × 61,03 = 732,36: o cartão TEM juros. A página não pode dizer
+    /* Espelham a tela do checkout: "Produto R$ 447,30 · Até 12 x R$ 45,73".
+       ⚠️ 12 × 45,73 = 548,76: o cartão TEM juros. A página não pode dizer
        "sem juros" em lugar nenhum.
        `de` e `economia` vazios somem da tela (todo [data-se] sem valor fica
        hidden) — um preço cheio inventado seria número falso na cara do
        comprador. Se um dia houver "de/por" de verdade, é só preencher. */
     preco: {
       parcelas: "12x",
-      parcela:  "R$ 61,03",     // o número GRANDE da página
+      parcela:  "R$ 45,73",     // o número GRANDE da página
       nota:     "no cartão",    // o que acompanha a parcela
-      vista:    "R$ 637,00",    // o total do checkout
+      vista:    "R$ 447,30",    // o total do checkout
       de:       "",             // valor cheio, riscado acima da parcela
       economia: ""              // valor cheio − à vista
     }
